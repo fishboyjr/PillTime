@@ -5,6 +5,7 @@ import {
 } from './lib/schedule.js';
 import { formatWhen, formatRelative } from './lib/format.js';
 import { GitHubFile } from './lib/github.js';
+import { DemoFile } from './lib/demo.js';
 
 const CONFIG_KEY = 'pilltime.config';
 const CACHE_KEY = 'pilltime.lastState';
@@ -21,7 +22,7 @@ let busy = false;
 function loadConfig() {
   try {
     const c = JSON.parse(localStorage.getItem(CONFIG_KEY));
-    return c && c.token && c.owner && c.repo ? c : null;
+    return c && (c.demo || (c.token && c.owner && c.repo)) ? c : null;
   } catch { return null; }
 }
 
@@ -34,11 +35,13 @@ function cacheState(s) {
 }
 
 function makeClient(c) {
+  if (c.demo) return new DemoFile();
   return new GitHubFile({ owner: c.owner, repo: c.repo, path: c.path || 'state.json', branch: c.branch || '', token: c.token });
 }
 
-function showBanner(text) {
+function showBanner(text, info) {
   const b = $('banner');
+  b.classList.toggle('info', !!info);
   b.textContent = text || '';
   b.hidden = !text;
 }
@@ -140,7 +143,7 @@ async function refresh() {
     if (errors.length) {
       showBanner(`state.json has problems: ${errors.join('; ')}`);
     } else {
-      showBanner('');
+      showBanner(config.demo ? 'Demo mode: sample data, saved only on this phone. Set up the real data repo in ⚙ when ready.' : '', true);
     }
     state = data;
     lastFetch = Date.now();
@@ -164,7 +167,7 @@ async function commit(mutate, message) {
     state = res.data;
     lastFetch = Date.now();
     cacheState(state);
-    showBanner('');
+    showBanner(config.demo ? 'Demo mode: sample data, saved only on this phone.' : '', true);
     return true;
   } catch (e) {
     showBanner(`Not saved: ${e.message}`);
@@ -271,6 +274,17 @@ async function renderNotifyStatus() {
     enable.hidden = test.hidden = disable.hidden = true;
     return;
   }
+  if (config && config.demo) {
+    const granted = Notification.permission === 'granted';
+    status.textContent = granted
+      ? 'Demo mode: notifications are allowed. Real reminders need the data repo and its checker; the test below shows what one looks like.'
+      : 'Demo mode: allow notifications to try a test notification. Real reminders need the data repo and its checker.';
+    enable.hidden = granted;
+    enable.textContent = 'Allow notifications';
+    test.hidden = !granted;
+    disable.hidden = true;
+    return;
+  }
   const sub = await currentSubscription().catch(() => null);
   const saved = sub && state && hasSubscription(state, sub.endpoint);
   if (saved) {
@@ -287,6 +301,11 @@ async function renderNotifyStatus() {
 }
 
 async function enableNotifications() {
+  if (config && config.demo) {
+    await Notification.requestPermission();
+    renderNotifyStatus();
+    return;
+  }
   if (!state || !state.vapid_public_key) {
     showBanner('state.json has no vapid_public_key yet. See the setup guide.');
     return;
@@ -376,11 +395,24 @@ async function saveSettings(ev) {
   }
 }
 
+async function startDemo() {
+  const name = $('settings-form').name.value.trim() || 'Me';
+  config = { demo: true, name };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  gh = makeClient(config);
+  state = null;
+  lastFetch = null;
+  showView('meds');
+  await refresh();
+}
+
 function forgetEverything() {
   if (!confirm('Remove the token and saved data from this phone?')) return;
   localStorage.removeItem(CONFIG_KEY);
   localStorage.removeItem(CACHE_KEY);
+  DemoFile.reset();
   config = gh = state = null;
+  showBanner('');
   fillSettingsForm();
 }
 
@@ -395,6 +427,7 @@ $('open-settings').addEventListener('click', () => showView('settings'));
 $('settings-form').addEventListener('submit', saveSettings);
 $('settings-cancel').addEventListener('click', () => showView('meds'));
 $('settings-forget').addEventListener('click', forgetEverything);
+$('settings-demo').addEventListener('click', startDemo);
 $('given-at').addEventListener('input', updatePreview);
 $('given-form').addEventListener('submit', (ev) => {
   if (ev.submitter && ev.submitter.value === 'cancel') return;

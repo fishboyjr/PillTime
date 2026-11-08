@@ -47,8 +47,9 @@ the update procedure are in [`docs/state-schema.md`](docs/state-schema.md).
    [`data-repo-template/README.md`](data-repo-template/README.md): create the
    private repo, add the VAPID secrets, and make the phone and TV tokens.
 2. **Phone app hosting.** In this repo, go to **Settings → Pages → Source**
-   and choose *GitHub Actions*. Pushing to `main` deploys `app/` to
-   `https://<owner>.github.io/<repo>/`.
+   and choose *GitHub Actions*. Pushing to the default branch deploys `app/`
+   to `https://<owner>.github.io/<repo>/`. To try the app before setting up
+   the data repo, open that URL and tap **Try the demo**.
 3. **Each phone.**
    - **iPhone (iOS 16.4+):** open the Pages URL in Safari, tap Share → *Add
      to Home Screen*, then open PillTime **from the Home Screen icon**. Do the

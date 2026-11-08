@@ -3,7 +3,6 @@ name: Deploy PWA to GitHub Pages
 # One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
 on:
   push:
-    branches: [main]
     paths: ['app/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
@@ -18,6 +17,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Deploy only from the repo's default branch, whatever it is called.
+    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     environment:
       name: github-pages
