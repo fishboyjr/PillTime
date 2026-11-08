@@ -1,0 +1,12 @@
+{
+  "name": "pilltime",
+  "private": true,
+  "type": "module",
+  "description": "Household reminders for a dog's medications: phone PWA, webOS TV app, and the data-repo checker template.",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "serve": "python3 -m http.server 8080 --directory app",
+    "build:tv": "node tv/build.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

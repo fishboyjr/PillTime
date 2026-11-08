@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>PillTime</title>
+  <link rel="stylesheet" href="tv.css">
+</head>
+<body>
+  <header>
+    <h1>PillTime</h1>
+    <div id="clock"></div>
+  </header>
+  <div id="alert" class="alert" hidden></div>
+  <main id="units"></main>
+  <footer id="status"></footer>
+  <!-- webOSTV.js from the LG SDK. Copied in by build.mjs if tv/webOSTV.js exists. -->
+  <script src="webOSTV.js" onerror="void 0"></script>
+  <script src="config.js"></script>
+  <script src="bundle.js"></script>
+</body>
+</html>

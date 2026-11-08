@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PillTime</title>
+  <meta name="theme-color" content="#2f6f5e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PillTime">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="robots" content="noindex">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="bar">
+    <h1>PillTime</h1>
+    <div class="bar-actions">
+      <button id="refresh" class="icon-btn" type="button" aria-label="Refresh">↻</button>
+      <button id="open-settings" class="icon-btn" type="button" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <main>
+    <p id="banner" class="banner" hidden></p>
+
+    <section id="view-meds">
+      <div id="cards" class="cards" aria-live="polite"></div>
+      <p id="updated" class="muted small"></p>
+
+      <section class="panel" id="notify-panel">
+        <h2>Notifications on this phone</h2>
+        <p id="notify-status" class="muted"></p>
+        <div class="row">
+          <button id="notify-enable" type="button">Turn on</button>
+          <button id="notify-test" type="button" class="secondary" hidden>Test on this phone</button>
+          <button id="notify-disable" type="button" class="secondary" hidden>Turn off</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Recent doses</h2>
+        <ol id="history" class="history"></ol>
+      </section>
+    </section>
+
+    <section id="view-settings" hidden>
+      <form id="settings-form" class="panel" autocomplete="off">
+        <h2>Setup</h2>
+        <p class="muted small">Saved only on this phone. On iPhone, do this inside the Home Screen app, not in Safari: they keep separate storage.</p>
+        <label>Your name <input name="name" required maxlength="40" placeholder="Shown next to doses you log"></label>
+        <label>Data repo owner <input name="owner" required autocapitalize="off" spellcheck="false"></label>
+        <label>Data repo name <input name="repo" required autocapitalize="off" spellcheck="false"></label>
+        <label>File path <input name="path" value="state.json" autocapitalize="off" spellcheck="false"></label>
+        <label>Branch <input name="branch" placeholder="default branch" autocapitalize="off" spellcheck="false"></label>
+        <label>GitHub token <input name="token" type="password" required autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></label>
+        <p class="muted small">Fine-grained token for the data repo only, with Contents: Read and write.</p>
+        <p id="settings-error" class="error" hidden></p>
+        <div class="row">
+          <button type="submit">Save and connect</button>
+          <button type="button" id="settings-cancel" class="secondary">Cancel</button>
+        </div>
+        <div class="row">
+          <button type="button" id="settings-forget" class="danger">Forget everything on this phone</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <dialog id="given-dialog">
+    <form method="dialog" id="given-form">
+      <h2 id="given-title"></h2>
+      <label>Given at <input type="datetime-local" id="given-at" required></label>
+      <p id="given-preview" class="muted"></p>
+      <p id="given-warning" class="warning" hidden></p>
+      <p id="given-error" class="error" hidden></p>
+      <div class="row">
+        <button value="confirm" id="given-confirm">Log dose</button>
+        <button value="cancel" class="secondary" formnovalidate>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <footer class="muted small">A reminder tool, not dosing advice. Follow the vet's instructions and the medication labels.</footer>
+</body>
+</html>

@@ -1,0 +1,41 @@
+name: Medication checker
+
+on:
+  # Every 30 minutes, off the top of the hour (GitHub delays :00 runs most).
+  # Each run bills as at least 1 minute: 48 runs/day x 31 days = 1,488 of the
+  # 2,000 free private-repo minutes. Every 15 minutes would be ~2,976 and go over.
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Plan only: send nothing, write nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: med-checker
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: checker
+      - name: Install
+        working-directory: checker
+        run: npm ci --omit=dev --no-audit --no-fund
+      - name: Check and notify
+        run: node checker/check.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}

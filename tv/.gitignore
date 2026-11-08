@@ -1,0 +1,6 @@
+# Holds the read-only token. Never commit.
+config.js
+dist/
+*.ipk
+# From the LG SDK; not ours to redistribute.
+webOSTV.js

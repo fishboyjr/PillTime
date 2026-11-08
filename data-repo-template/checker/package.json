@@ -1,0 +1,9 @@
+{
+  "name": "pilltime-checker",
+  "private": true,
+  "type": "module",
+  "description": "Scheduled Web Push checker for PillTime. Lives in the private data repo.",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

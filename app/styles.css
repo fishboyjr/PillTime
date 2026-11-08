@@ -1,0 +1,131 @@
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --text: #1d2321;
+  --muted: #5e6764;
+  --border: #dcdad3;
+  --accent: #2f6f5e;
+  --accent-text: #ffffff;
+  --ok: #2f6f5e;
+  --soon: #9a6300;
+  --soon-bg: #fff4dd;
+  --due: #b3261e;
+  --due-bg: #fde8e6;
+  --danger: #b3261e;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141816;
+    --surface: #1e2321;
+    --text: #e8ece9;
+    --muted: #9aa5a0;
+    --border: #333b38;
+    --accent: #6fc2a8;
+    --accent-text: #0b1f19;
+    --ok: #6fc2a8;
+    --soon: #f0b75a;
+    --soon-bg: #3a2c12;
+    --due: #ff8a80;
+    --due-bg: #3d1a17;
+    --danger: #ff8a80;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+main, footer { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+footer { padding-top: 8px; padding-bottom: 24px; }
+
+.bar {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.bar h1 { font-size: 20px; margin: 0; }
+.bar-actions { display: flex; gap: 4px; }
+.icon-btn {
+  background: none; border: none; color: var(--text);
+  font-size: 22px; width: 44px; height: 44px; border-radius: 10px; padding: 0;
+}
+.icon-btn:active { background: var(--border); }
+
+h2 { font-size: 17px; margin: 0 0 8px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+.banner {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--due-bg); color: var(--due);
+}
+
+.cards { display: grid; gap: 12px; margin-top: 16px; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--ok);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.card.soon { border-left-color: var(--soon); }
+.card.due { border-left-color: var(--due); background: var(--due-bg); }
+.card.unknown { border-left-color: var(--muted); }
+.card-title { font-size: 18px; font-weight: 600; margin: 0 0 4px; overflow-wrap: anywhere; }
+.badge {
+  display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .02em;
+  padding: 2px 8px; border-radius: 999px; margin-bottom: 8px;
+  background: var(--border); color: var(--text);
+}
+.card.due .badge { background: var(--due); color: var(--surface); }
+.card.soon .badge { background: var(--soon-bg); color: var(--soon); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 12px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+.card .row { margin-top: 0; }
+
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+button {
+  font: inherit; font-weight: 600;
+  min-height: 44px; padding: 0 18px; border-radius: 10px;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text);
+}
+button.secondary { background: transparent; color: var(--accent); }
+button.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+button.link { background: none; border: none; color: var(--muted); padding: 0 8px; font-weight: 500; text-decoration: underline; }
+button:disabled { opacity: .5; }
+.card button.given { flex: 1 1 auto; }
+
+.panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; margin: 16px 0;
+}
+label { display: block; margin: 10px 0; font-weight: 500; }
+input {
+  display: block; width: 100%; margin-top: 4px;
+  font: inherit; padding: 10px 12px; min-height: 44px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg); color: var(--text);
+}
+.error { color: var(--danger); }
+.warning { color: var(--soon); background: var(--soon-bg); padding: 8px 10px; border-radius: 8px; }
+
+.history { list-style: none; margin: 0; padding: 0; }
+.history li { padding: 6px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.history li:first-child { border-top: none; }
+.history .undone { text-decoration: line-through; color: var(--muted); }
+
+dialog {
+  border: 1px solid var(--border); border-radius: 16px;
+  background: var(--surface); color: var(--text);
+  width: min(440px, calc(100vw - 32px)); padding: 16px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, .45); }

@@ -1,0 +1,12 @@
+{
+  "id": "com.household.pilltime",
+  "version": "1.0.0",
+  "vendor": "Household",
+  "type": "web",
+  "main": "index.html",
+  "title": "PillTime",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgColor": "#141816",
+  "resolution": "1920x1080"
+}
