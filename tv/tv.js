@@ -7,10 +7,23 @@
 var POLL_MS = 60000;
 var TOASTED_KEY = 'pilltime.tv.toasted';
 var cfg = window.PILLTIME_CONFIG || {};
-var gh = new GitHubFile({
-  owner: cfg.owner, repo: cfg.repo, path: cfg.path || 'state.json',
-  branch: cfg.branch || '', token: cfg.token
-});
+var gh;
+if (cfg.demo) {
+  // Sample data held in memory: the 6-hour pair comes due 2 minutes after
+  // launch and the morning med 5 minutes after, to test toasts.
+  var demoStart = Date.now();
+  var demoState = demoSeed(demoStart);
+  demoState.meds.forEach(function (m) {
+    if (m.group === 'q6') m.next_due = new Date(demoStart + 2 * 60000).toISOString();
+    if (m.id === 'am') m.next_due = new Date(demoStart + 5 * 60000).toISOString();
+  });
+  gh = { read: function () { return Promise.resolve({ sha: 'demo', data: demoState }); } };
+} else {
+  gh = new GitHubFile({
+    owner: cfg.owner, repo: cfg.repo, path: cfg.path || 'state.json',
+    branch: cfg.branch || '', token: cfg.token
+  });
+}
 var state = null;
 var lastOk = null;
 var lastError = null;
@@ -94,7 +107,7 @@ function render() {
   }
   alertBox.hidden = !dueLabels.length;
   alertBox.textContent = dueLabels.length ? 'Due now: ' + dueLabels.join(', ') : '';
-  var status = lastOk ? 'Updated ' + formatRelative(lastOk, now) : 'Connecting…';
+  var status = (cfg.demo ? 'DEMO · ' : '') + (lastOk ? 'Updated ' + formatRelative(lastOk, now) : 'Connecting…');
   if (lastError) status += ' · ' + lastError;
   document.getElementById('status').textContent = status;
 }
@@ -112,7 +125,7 @@ function poll() {
   });
 }
 
-if (!cfg.token) {
+if (!cfg.token && !cfg.demo) {
   lastError = 'No token in config.js. Rebuild with build.mjs.';
   render();
 } else {

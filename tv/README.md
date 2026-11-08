@@ -7,6 +7,13 @@ It is installed in Developer Mode and never published.
 The TV is a secondary channel. It only reacts while it is on, and see the
 caveats below. Phones are the reliable channel.
 
+## Quick test with sample data
+
+`node tv/build.mjs --demo` builds the app with sample data and no token. The
+6-hour meds come due 2 minutes after launch and the morning med 5 minutes
+after launch, so you can check the toast and background behaviour before the
+data repo exists. Install it as below. Each launch starts the timers again.
+
 ## Build
 
 Needs Node 20+ and a read-only fine-grained token for the data repo (see
