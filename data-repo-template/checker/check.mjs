@@ -50,7 +50,12 @@ async function writeState(data, sha, message) {
 }
 
 const { data: state } = await readState();
-const plans = planNotifications(state, Date.now());
+// A manual run with a test message sends just that, to every phone, and
+// leaves the medication schedule and notified_for alone.
+const testMessage = (env.TEST_MESSAGE || '').trim();
+const plans = testMessage
+  ? [{ unit: 'test', dueFor: {}, payload: { title: 'PillTime test', body: testMessage.slice(0, 200), tag: 'pilltime-test' } }]
+  : planNotifications(state, Date.now());
 const subs = Array.isArray(state.subscriptions) ? state.subscriptions : [];
 console.log(`Due units: ${plans.map((p) => p.unit).join(', ') || 'none'}; subscriptions: ${subs.length}`);
 if (!plans.length) process.exit(0);

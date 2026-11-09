@@ -12,6 +12,10 @@ on:
         description: 'Plan only: send nothing, write nothing'
         type: boolean
         default: false
+      test_message:
+        description: 'Send this text to every phone as a test, instead of checking doses'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -39,3 +43,4 @@ jobs:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          TEST_MESSAGE: ${{ inputs.test_message }}
