@@ -103,6 +103,12 @@ for (const plan of plans) {
   log(`Unit ${plan.unit}: delivered to ${ok}/${subs.length}${dryRun ? ' (dry run)' : ''}`);
   // Only mark as notified if at least one phone accepted it; otherwise retry next run.
   if (ok > 0) sent.push(plan);
+  // Every live subscription refused it (for example a wrong VAPID key): fail
+  // the run so GitHub emails the owner, even when logs are silenced.
+  else if (subs.some((x) => !dead.has(x.endpoint))) {
+    console.error('No phone accepted the notification. Check the VAPID secrets.');
+    process.exitCode = 1;
+  }
 }
 
 if (dryRun) process.exit(0);
