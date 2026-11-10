@@ -18,8 +18,9 @@ export function getUnits(state) {
 }
 
 function clock(t, tz) {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false })
-    .format(new Date(t));
+  return new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true })
+    .format(new Date(t))
+    .replace(/\s/g, ' '); // some ICU versions put a narrow no-break space before AM/PM
 }
 
 // Which units need a push now. A unit is notified once per next_due value:

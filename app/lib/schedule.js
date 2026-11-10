@@ -216,14 +216,14 @@ export function previewGiven(state, unitId, givenAtIso) {
   if (sched.type === 'daily') {
     if (last !== null && last <= givenAt &&
         nextDueAfterGiven(unit.meds[0], last, state.timezone) === nextDue) {
-      warning = 'A dose was already logged since the last ' + sched.time +
-        ' dose time. This would be an extra dose; the next one is still due at ' + sched.time + '.';
+      warning = 'A dose was already logged since the last ' + formatTime12(sched.time) +
+        ' dose time. This would be an extra dose; the next one is still due at ' + formatTime12(sched.time) + '.';
     } else {
       var gapWarn = sched.short_gap_warning_hours == null ? DEFAULT_SHORT_GAP_WARNING_HOURS : sched.short_gap_warning_hours;
       var gapH = (nextDue - givenAt) / HOUR_MS;
       if (gapH < gapWarn) {
         warning = 'The next dose would be due only ' + (Math.round(gapH * 10) / 10) +
-          ' h after this one (at ' + sched.time + '). Check the vet\'s instructions.';
+          ' h after this one (at ' + formatTime12(sched.time) + '). Check the vet\'s instructions.';
       }
     }
   } else if (pending !== null && givenAt < pending) {
@@ -324,6 +324,18 @@ export function removeSubscription(state, endpoint) {
 
 export function hasSubscription(state, endpoint) {
   return (state.subscriptions || []).some(function (x) { return x.endpoint === endpoint; });
+}
+
+// 12-hour clock text: (14, 5) -> "2:05 PM", (0, 0) -> "12:00 AM".
+export function formatHm12(h, mi) {
+  var h12 = h % 12 === 0 ? 12 : h % 12;
+  return h12 + ':' + pad2(mi) + ' ' + (h < 12 ? 'AM' : 'PM');
+}
+
+// "08:00" -> "8:00 AM"
+export function formatTime12(hhmm) {
+  var hm = parseHhMm(hhmm);
+  return formatHm12(hm.h, hm.mi);
 }
 
 export { pad2 };

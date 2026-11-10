@@ -24,13 +24,13 @@ test('one plan per due group, with both names', () => {
   const plans = planNotifications(given(), T0 + 6 * H + 60000);
   assert.equal(plans.length, 1);
   assert.equal(plans[0].unit, 'q6');
-  assert.match(plans[0].payload.body, /6-hour med A> \+ <TBD 6-hour med B>: due 11:00/);
+  assert.match(plans[0].payload.body, /6-hour med A> \+ <TBD 6-hour med B>: due 11:00 AM/);
   assert.deepEqual(Object.keys(plans[0].dueFor), ['q6a', 'q6b']);
 });
 
 test('overdue wording after 15 minutes', () => {
   const [p] = planNotifications(given(), T0 + 7 * H);
-  assert.match(p.payload.body, /overdue since 11:00/);
+  assert.match(p.payload.body, /overdue since 11:00 AM/);
 });
 
 test('lead time notifies early', () => {

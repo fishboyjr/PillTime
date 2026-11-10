@@ -145,9 +145,11 @@ test('subscriptions upsert by endpoint and remove', () => {
 
 test('formatting', () => {
   const now = Date.parse('2026-11-08T17:00:00Z'); // 12:00 EST
-  assert.equal(formatWhen(Date.parse('2026-11-08T19:00:00Z'), now, TZ), 'Today 14:00');
-  assert.equal(formatWhen(Date.parse('2026-11-09T13:00:00Z'), now, TZ), 'Tomorrow 08:00');
-  assert.equal(formatWhen(Date.parse('2026-11-08T04:00:00Z'), now, TZ), 'Yesterday 23:00');
+  assert.equal(formatWhen(Date.parse('2026-11-08T19:00:00Z'), now, TZ), 'Today 2:00 PM');
+  assert.equal(formatWhen(Date.parse('2026-11-09T13:00:00Z'), now, TZ), 'Tomorrow 8:00 AM');
+  assert.equal(formatWhen(Date.parse('2026-11-08T04:00:00Z'), now, TZ), 'Yesterday 11:00 PM');
+  assert.equal(formatWhen(Date.parse('2026-11-12T05:05:00Z'), now, TZ), 'Thu 11/12 12:05 AM');
+  assert.equal(formatWhen(Date.parse('2026-11-08T17:30:00Z'), now, TZ), 'Today 12:30 PM');
   assert.equal(formatRelative(now + 125 * 60000, now), 'in 2 h 5 min');
   assert.equal(formatRelative(now - 35 * 60000, now), '35 min ago');
 });
