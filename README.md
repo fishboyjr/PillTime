@@ -94,11 +94,10 @@ in `app/lib/`, and the TV build bundles the same files.
 
 ## Known limits
 
-- GitHub Actions cron runs can start several minutes late, and the checker
-  runs every 30 minutes to stay inside the free minutes. A push can arrive up
-  to about 30–40 minutes after the due time. `settings.notify_lead_minutes`
-  can send it earlier. The phone and TV screens show the exact due time
-  either way.
+- Reminders depend on cron-job.org starting the checker every 5 minutes
+  (GitHub's own schedule skipped most runs). A push normally arrives within
+  about 5 minutes of the due time. If cron-job.org stops, the 15-minute
+  GitHub schedule in this repo is a weaker backup.
 - iPhone push only works for the Home Screen app, on iOS 16.4 or later.
 - The TV only reacts while it is on. See the unverified items in
   [`tv/README.md`](tv/README.md).

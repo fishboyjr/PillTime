@@ -49,17 +49,26 @@ Fine-grained tokens expire. When one does, the app shows "GitHub rejected the
 token". Make a new one and enter it in the app's settings (⚙), or rebuild
 the TV app.
 
-## Action minutes
+## When the checker runs
 
-Private repos get 2,000 free Action minutes a month, and each run counts as
-at least one minute. Running every 30 minutes uses about 1,488 a month.
-Every 15 minutes would use about 2,976 and go over the limit. If you want
-pushes to arrive earlier, set `settings.notify_lead_minutes` in `state.json`
-(for example `15`) rather than running more often. Check usage under
-**Settings → Billing**.
+GitHub's own schedule proved unreliable here: in private repos it skipped
+most runs, sometimes for 11 hours. So reminders run from the **public**
+PillTime repo (`.github/workflows/checker.yml`), where Actions minutes are
+free, and an outside pinger starts it every 5 minutes:
 
-GitHub turns off scheduled workflows after 60 days with no repo activity.
-Logging doses commits to this repo, so normal use keeps it on.
+- **PillTime repo secrets:** `DATA_TOKEN` (fine-grained, this data repo only,
+  Contents: Read and write) and the three `VAPID_*` secrets.
+- **cron-job.org job:** every 5 minutes, `POST` to
+  `https://api.github.com/repos/fishboyjr/PillTime/actions/workflows/checker.yml/dispatches`
+  with headers `Authorization: Bearer <token>` (fine-grained, PillTime repo
+  only, Actions: Read and write), `Accept: application/vnd.github+json`,
+  `Content-Type: application/json`, and body
+  `{"ref":"<PillTime default branch>"}`.
+- The public workflow runs with `QUIET=1`, so its logs show nothing about the
+  meds. It also has a 15-minute GitHub schedule as a backup.
+
+The workflow in this repo has no schedule. Use it from the **Actions** tab
+for dry runs, or to send a test message to every phone.
 
 ## Logs
 

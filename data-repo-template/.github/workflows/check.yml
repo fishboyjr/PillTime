@@ -1,11 +1,10 @@
-name: Medication checker
+name: Medication checker (manual)
 
 on:
-  # Every 30 minutes, off the top of the hour (GitHub delays :00 runs most).
-  # Each run bills as at least 1 minute: 48 runs/day x 31 days = 1,488 of the
-  # 2,000 free private-repo minutes. Every 15 minutes would be ~2,976 and go over.
-  schedule:
-    - cron: '7,37 * * * *'
+  # No schedule here: GitHub skipped most scheduled runs in this private repo.
+  # Reminders run from the public PillTime repo (.github/workflows/checker.yml),
+  # started every 5 minutes by cron-job.org. This workflow stays for manual
+  # dry runs and test messages.
   workflow_dispatch:
     inputs:
       dry_run:
