@@ -1,0 +1,58 @@
+name: Medication checker
+
+# Runs the reminder checker from this public repo, where Actions minutes are
+# free, against the private data repo. GitHub's own schedule skips many runs,
+# so an outside pinger (cron-job.org) starts this every 5 minutes through the
+# workflow_dispatch API. The schedule below is only a backup.
+#
+# Logs here are public: the checker runs with QUIET=1 and prints nothing.
+#
+# Secrets (Settings -> Secrets and variables -> Actions):
+#   DATA_TOKEN         fine-grained token, PillTime-data only, Contents: Read and write
+#   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
+# Variable:
+#   STATE_REPO         optional, defaults to fishboyjr/PillTime-data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '3,18,33,48 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: med-checker
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # Never run in forks.
+    if: github.repository == 'fishboyjr/PillTime'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Configured?
+        id: cfg
+        env:
+          DATA_TOKEN: ${{ secrets.DATA_TOKEN }}
+        run: |
+          if [ -n "$DATA_TOKEN" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"; else echo "::notice::DATA_TOKEN secret not set yet; skipping."; fi
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.ok
+        with:
+          sparse-checkout: data-repo-template/checker
+      - name: Install
+        if: steps.cfg.outputs.ok
+        working-directory: data-repo-template/checker
+        run: npm ci --omit=dev --no-audit --no-fund --loglevel=error
+      - name: Check and notify
+        if: steps.cfg.outputs.ok
+        run: node data-repo-template/checker/check.mjs
+        env:
+          QUIET: '1'
+          STATE_REPO: ${{ vars.STATE_REPO || 'fishboyjr/PillTime-data' }}
+          GITHUB_TOKEN: ${{ secrets.DATA_TOKEN }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}

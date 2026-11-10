@@ -5,10 +5,17 @@ import webpush from 'web-push';
 import { planNotifications, applyResults } from './logic.mjs';
 
 const env = process.env;
-const [owner, repo] = (env.GITHUB_REPOSITORY || '').split('/');
+// STATE_REPO (owner/name) lets the checker run from another repo, such as the
+// public code repo, and read the private data repo with a token.
+const stateRepo = env.STATE_REPO || env.GITHUB_REPOSITORY || '';
+const [owner, repo] = stateRepo.split('/');
 const path = env.STATE_PATH || 'state.json';
-const branch = env.STATE_BRANCH || env.GITHUB_REF_NAME || '';
+const branch = env.STATE_BRANCH || (env.STATE_REPO ? '' : env.GITHUB_REF_NAME) || '';
 const dryRun = env.DRY_RUN === '1' || env.DRY_RUN === 'true';
+// QUIET=1 prints nothing but errors: used when the logs are public.
+const quiet = env.QUIET === '1' || env.QUIET === 'true';
+const log = quiet ? () => {} : console.log;
+const warn = quiet ? () => {} : console.warn;
 
 function need(name) {
   if (!env[name]) {
@@ -57,16 +64,16 @@ const plans = testMessage
   ? [{ unit: 'test', dueFor: {}, payload: { title: 'PillTime test', body: testMessage.slice(0, 200), tag: 'pilltime-test' } }]
   : planNotifications(state, Date.now());
 const subs = Array.isArray(state.subscriptions) ? state.subscriptions : [];
-console.log(`Due units: ${plans.map((p) => p.unit).join(', ') || 'none'}; subscriptions: ${subs.length}`);
+log(`Due units: ${plans.map((p) => p.unit).join(', ') || 'none'}; subscriptions: ${subs.length}`);
 if (!plans.length) process.exit(0);
 if (!subs.length) {
-  console.log('No subscriptions; nothing sent. Will retry next run.');
+  log('No subscriptions; nothing sent. Will retry next run.');
   process.exit(0);
 }
 
 const publicKey = need('VAPID_PUBLIC_KEY');
 if (state.vapid_public_key && state.vapid_public_key !== publicKey) {
-  console.warn('WARNING: state.json vapid_public_key does not match the VAPID_PUBLIC_KEY secret. Phones subscribed with the wrong key will not receive pushes.');
+  warn('WARNING: state.json vapid_public_key does not match the VAPID_PUBLIC_KEY secret. Phones subscribed with the wrong key will not receive pushes.');
 }
 webpush.setVapidDetails(need('VAPID_SUBJECT'), publicKey, need('VAPID_PRIVATE_KEY'));
 
@@ -87,13 +94,13 @@ for (const plan of plans) {
     } catch (e) {
       if (e.statusCode === 404 || e.statusCode === 410) {
         dead.add(sub.endpoint);
-        console.log(`Subscription gone (${e.statusCode}); removing.`);
+        log(`Subscription gone (${e.statusCode}); removing.`);
       } else {
-        console.warn(`Push failed for one subscription: ${e.statusCode || e.message}`);
+        warn(`Push failed for one subscription: ${e.statusCode || e.message}`);
       }
     }
   }
-  console.log(`Unit ${plan.unit}: delivered to ${ok}/${subs.length}${dryRun ? ' (dry run)' : ''}`);
+  log(`Unit ${plan.unit}: delivered to ${ok}/${subs.length}${dryRun ? ' (dry run)' : ''}`);
   // Only mark as notified if at least one phone accepted it; otherwise retry next run.
   if (ok > 0) sent.push(plan);
 }
@@ -107,9 +114,9 @@ for (let attempt = 0; attempt < 6; attempt++) {
   const msg = `checker: notified ${sent.map((p) => p.unit).join(', ') || 'none'}` +
     (dead.size ? `, removed ${dead.size} subscription(s)` : '');
   if (await writeState(next, cur.sha, msg)) {
-    console.log('state.json updated.');
+    log('state.json updated.');
     break;
   }
-  console.log('Write conflict; retrying.');
+  log('Write conflict; retrying.');
   await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
 }
