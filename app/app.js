@@ -6,9 +6,10 @@ import {
 import { formatWhen, formatRelative, formatClock } from './lib/format.js';
 import { GitHubFile } from './lib/github.js';
 import { DemoFile } from './lib/demo.js';
+import { hyperspace, preloadHyperspace } from './lib/hyperspace.js';
 
 // Shown in Setup so we can tell which version a phone is running.
-const APP_VERSION = 7;
+const APP_VERSION = 8;
 const CONFIG_KEY = 'pilltime.config';
 const CACHE_KEY = 'pilltime.lastState';
 const POLL_MS = 60000;
@@ -319,7 +320,9 @@ async function confirmGiven(ev) {
   $('given-dialog').close();
   const unitId = givenUnitId;
   const iso = new Date(t).toISOString();
-  await commit((cur) => applyGiven(cur, unitId, iso, config.name), `Given: ${unitId} at ${iso} by ${config.name}`);
+  const saved = await commit((cur) => applyGiven(cur, unitId, iso, config.name), `Given: ${unitId} at ${iso} by ${config.name}`);
+  // Celebrate only once the dose is really saved.
+  if (saved) hyperspace();
 }
 
 async function undoDose(unitId, entry) {
@@ -563,6 +566,7 @@ async function manualRefresh() {
 }
 
 $('refresh').addEventListener('click', manualRefresh);
+preloadHyperspace();
 $('open-settings').addEventListener('click', () => {
   if ($('view-settings').hidden) showView('settings');
   else if (config) { showView('meds'); render(); }
