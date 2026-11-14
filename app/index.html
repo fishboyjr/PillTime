@@ -19,13 +19,14 @@
   <header class="bar">
     <h1>PillTime</h1>
     <div class="bar-actions">
-      <button id="refresh" class="icon-btn" type="button" aria-label="Refresh">↻</button>
+      <button id="refresh" class="icon-btn" type="button" aria-label="Refresh"><span class="icon">↻</span></button>
       <button id="open-settings" class="icon-btn" type="button" aria-label="Settings">⚙</button>
     </div>
   </header>
 
   <main>
     <p id="banner" class="banner" hidden></p>
+    <p id="toast" class="toast" role="status" aria-live="polite" hidden></p>
 
     <section id="view-meds">
       <div id="cards" class="cards" aria-live="polite"></div>
@@ -87,6 +88,7 @@
           </div>
         </form>
       </section>
+      <p class="muted small center" id="app-version"></p>
     </section>
   </main>
 

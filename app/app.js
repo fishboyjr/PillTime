@@ -7,6 +7,8 @@ import { formatWhen, formatRelative, formatClock } from './lib/format.js';
 import { GitHubFile } from './lib/github.js';
 import { DemoFile } from './lib/demo.js';
 
+// Shown in Setup so we can tell which version a phone is running.
+const APP_VERSION = 7;
 const CONFIG_KEY = 'pilltime.config';
 const CACHE_KEY = 'pilltime.lastState';
 const POLL_MS = 60000;
@@ -71,6 +73,7 @@ function showView(name) {
 // Before the phone is connected, Advanced settings is open with no warning,
 // since it is the setup itself.
 function fillSettingsForm() {
+  $('app-version').textContent = `PillTime version ${APP_VERSION}`;
   const c = config || {};
   const connected = !!config;
   $('your-name').value = c.name || '';
@@ -533,11 +536,19 @@ async function checkForAppUpdate() {
 
 // The ↻ button: spin while re-reading the shared data, then check whether a
 // newer version of the app has been published.
+let toastTimer = null;
+function showToast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2000);
+}
+
 async function manualRefresh() {
   const btn = $('refresh');
   if (btn.classList.contains('spinning')) return;
   btn.classList.add('spinning');
-  btn.disabled = true;
   const started = Date.now();
   try {
     await refresh();
@@ -545,8 +556,9 @@ async function manualRefresh() {
   } finally {
     setTimeout(() => {
       btn.classList.remove('spinning');
-      btn.disabled = false;
-    }, Math.max(0, 700 - (Date.now() - started)));
+      const failed = !$('banner').hidden && !$('banner').classList.contains('info');
+      showToast(failed ? 'Could not refresh' : '✓ Up to date');
+    }, Math.max(0, 800 - (Date.now() - started)));
   }
 }
 

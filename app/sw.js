@@ -1,6 +1,6 @@
 // Service worker: offline app shell and Web Push display.
 // Bump VERSION when shell files change so phones pick up the new copy.
-const VERSION = 'pilltime-v6';
+const VERSION = 'pilltime-v7';
 const SHELL = [
   './', 'index.html', 'styles.css', 'app.js',
   'lib/schedule.js', 'lib/format.js', 'lib/github.js', 'lib/demo.js',
@@ -21,12 +21,14 @@ self.addEventListener('activate', (event) => {
 });
 
 // Network first for the shell so updates arrive quickly; cache when offline.
+// cache: 'no-cache' makes the browser check with the server every time
+// instead of reusing its own copy for up to 10 minutes.
 // Never touch GitHub API requests: they carry the token and must stay fresh.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
   event.respondWith(
-    fetch(event.request)
+    fetch(url.href, { cache: 'no-cache', credentials: 'same-origin' })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
