@@ -130,7 +130,6 @@ function saveName(ev) {
   st.hidden = false;
 }
 
-const LEVEL_TEXT = { due: 'DUE', soon: 'DUE SOON', ok: 'OK', unknown: 'NOT LOGGED YET' };
 
 function render() {
   const cards = $('cards');
@@ -144,34 +143,14 @@ function render() {
   const units = getUnits(state).map((unit) => ({
     unit, st: unitStatus(unit, now), undo: undoableEntry(state, unit.id), label: unitLabel(unit)
   }));
-  const design = currentDesign();
-  cards.className = `cards design-${design}`;
-  (DESIGNS[design] || DESIGNS.current)(cards, units, now, tz);
+  cards.className = 'cards design-c';
+  renderCards(cards, units, now, tz);
   $('updated').textContent = lastFetch ? `Updated ${formatRelative(lastFetch, now)}` : 'Showing saved copy';
   renderHistory(now, tz);
   renderNotifyStatus();
 }
 
-// ---------- card designs ----------
-// Preview with ?design=a|b|c in the URL. The chosen one becomes the default.
-
-function currentDesign() {
-  const q = new URLSearchParams(location.search).get('design');
-  return q && DESIGNS[q] ? q : 'current';
-}
-
-// "2 h 15 min" style parts for big countdowns.
-function countdown(st, now) {
-  if (st.nextDue == null) return { lead: 'Not logged yet', value: '—' };
-  const mins = Math.round((st.nextDue - now) / 60000);
-  const abs = Math.abs(mins);
-  const h = Math.floor(abs / 60);
-  const m = abs % 60;
-  const value = h ? `${h} h ${m} min` : `${m} min`;
-  if (abs < 1) return { lead: 'Due', value: 'Now' };
-  return mins > 0 ? { lead: 'Due in', value } : { lead: 'Overdue by', value };
-}
-
+// ---------- cards ----------
 function dayWord(t, now, tz) {
   const clock = formatClock(t, tz);
   return formatWhen(t, now, tz).replace(` ${clock}`, '');
@@ -184,98 +163,46 @@ function actionsRow(u) {
   return row;
 }
 
-function lastGivenText(st, now, tz) {
-  return st.lastGiven == null ? 'Never given' : `Last given ${formatWhen(st.lastGiven, now, tz)} by ${st.lastBy || 'unknown'}`;
-}
+// Due time large on the right, with a bar filling from the last dose to the
+// next. Time and status text turn red once a dose is due or overdue.
+function renderCards(cards, units, now, tz) {
+  for (const u of units) {
+    const { st } = u;
+    const due = st.level === 'due';
+    let pct = 0;
+    if (st.nextDue != null && st.lastGiven != null && st.nextDue > st.lastGiven) {
+      pct = Math.min(100, Math.max(0, ((now - st.lastGiven) / (st.nextDue - st.lastGiven)) * 100));
+    } else if (due) pct = 100;
 
-const DESIGNS = {
-  // The original layout.
-  current(cards, units, now, tz) {
-    for (const u of units) {
-      const { st } = u;
-      const facts = el('dl', { class: 'facts' },
-        el('dt', {}, 'Next due'),
-        el('dd', {}, st.nextDue == null ? 'After first dose is logged'
-          : `${formatWhen(st.nextDue, now, tz)} (${formatRelative(st.nextDue, now)})`),
-        el('dt', {}, 'Last given'),
-        el('dd', {}, st.lastGiven == null ? 'Never'
-          : `${formatWhen(st.lastGiven, now, tz)} by ${st.lastBy || 'unknown'}`));
-      cards.append(el('article', { class: `card ${st.level}` },
-        el('p', { class: 'card-title' }, u.label),
-        el('span', { class: 'badge' }, LEVEL_TEXT[st.level]),
-        facts, actionsRow(u)));
+    let dayText = 'Not logged yet';
+    let countText = '';
+    if (st.nextDue != null) {
+      const day = dayWord(st.nextDue, now, tz).replace(/^(Today|Tomorrow|Yesterday)$/, (w) => w.toLowerCase());
+      const rel = formatRelative(st.nextDue, now);
+      if (due) {
+        dayText = rel === 'now' ? 'Due now' : 'Overdue';
+        countText = rel === 'now' ? 'Due now' : `Overdue by ${rel.replace(' ago', '')}`;
+      } else {
+        dayText = `Due ${day}`;
+        countText = rel;
+      }
     }
-  },
 
-  // A: big countdown. The time left is the largest thing on the card.
-  a(cards, units, now, tz) {
-    for (const u of units) {
-      const { st } = u;
-      const cd = countdown(st, now);
-      cards.append(el('article', { class: `card ${st.level}` },
-        el('p', { class: 'a-name' }, u.label),
-        el('p', { class: 'a-lead' }, cd.lead),
-        el('p', { class: 'a-count' }, cd.value),
-        st.nextDue == null ? null
-          : el('p', { class: 'a-at' }, `${dayWord(st.nextDue, now, tz)} at ${formatClock(st.nextDue, tz)}`),
-        el('p', { class: 'a-last' }, lastGivenText(st, now, tz)),
-        actionsRow(u)));
-    }
-  },
-
-  // B: "Next up" banner for the soonest dose, then compact cards.
-  b(cards, units, now, tz) {
-    const order = units.slice().sort((x, y) =>
-      (x.st.nextDue == null ? Infinity : x.st.nextDue) - (y.st.nextDue == null ? Infinity : y.st.nextDue));
-    const first = order[0];
-    if (first && first.st.nextDue != null) {
-      const st = first.st;
-      const overdue = st.level === 'due';
-      cards.append(el('section', { class: `hero ${st.level}` },
-        el('p', { class: 'hero-eyebrow' }, overdue ? 'OVERDUE' : 'NEXT UP'),
-        el('p', { class: 'hero-time' }, formatClock(st.nextDue, tz)),
-        el('p', { class: 'hero-rel' }, `${dayWord(st.nextDue, now, tz)} · ${formatRelative(st.nextDue, now)}`),
-        el('p', { class: 'hero-name' }, first.label),
-        actionsRow(first)));
-    }
-    for (const u of order) {
-      if (u === first && u.st.nextDue != null) continue;
-      const { st } = u;
-      cards.append(el('article', { class: `card compact ${st.level}` },
-        el('div', { class: 'b-line' },
-          el('p', { class: 'b-name' }, u.label),
-          el('p', { class: 'b-time' }, st.nextDue == null ? '—' : formatClock(st.nextDue, tz))),
-        el('p', { class: 'b-sub' }, st.nextDue == null ? 'Not logged yet'
-          : `${dayWord(st.nextDue, now, tz)} · ${formatRelative(st.nextDue, now)}`),
-        el('p', { class: 'b-last' }, lastGivenText(st, now, tz)),
-        actionsRow(u)));
-    }
-  },
-
-  // C: due time on the right, with a bar filling from last dose to next.
-  c(cards, units, now, tz) {
-    for (const u of units) {
-      const { st } = u;
-      let pct = 0;
-      if (st.nextDue != null && st.lastGiven != null && st.nextDue > st.lastGiven) {
-        pct = Math.min(100, Math.max(0, ((now - st.lastGiven) / (st.nextDue - st.lastGiven)) * 100));
-      } else if (st.level === 'due') pct = 100;
-      const bar = el('div', { class: 'c-bar', role: 'progressbar', 'aria-valuenow': String(Math.round(pct)), 'aria-valuemin': '0', 'aria-valuemax': '100' },
-        el('div', { class: 'c-fill', style: `width:${pct}%` }));
-      cards.append(el('article', { class: `card ${st.level}` },
-        el('div', { class: 'c-top' },
-          el('div', {},
-            el('p', { class: 'c-name' }, u.label),
-            el('p', { class: 'c-day' }, st.nextDue == null ? 'Not logged yet' : `Due ${dayWord(st.nextDue, now, tz).replace(/^(Today|Tomorrow|Yesterday)$/, (w) => w.toLowerCase())}`)),
-          el('p', { class: 'c-time' }, st.nextDue == null ? '—' : formatClock(st.nextDue, tz))),
-        bar,
-        el('div', { class: 'c-foot' },
-          el('span', {}, st.lastGiven == null ? 'Never given' : `Given ${formatClock(st.lastGiven, tz)} · ${st.lastBy || 'unknown'}`),
-          el('strong', {}, st.nextDue == null ? '' : (st.level === 'due' ? `Overdue ${formatRelative(st.nextDue, now).replace(' ago', '')}` : formatRelative(st.nextDue, now)))),
-        actionsRow(u)));
-    }
+    const bar = el('div', { class: 'c-bar', role: 'progressbar', 'aria-valuenow': String(Math.round(pct)), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+      el('div', { class: 'c-fill', style: `width:${pct}%` }));
+    cards.append(el('article', { class: `card ${st.level}` },
+      el('div', { class: 'c-top' },
+        el('div', {},
+          el('p', { class: 'c-name' }, u.label),
+          el('p', { class: 'c-day' }, dayText)),
+        el('p', { class: 'c-time' }, st.nextDue == null ? '—' : formatClock(st.nextDue, tz))),
+      bar,
+      el('div', { class: 'c-foot' },
+        el('span', {}, st.lastGiven == null ? 'Never given' : `Given ${formatClock(st.lastGiven, tz)} · ${st.lastBy || 'unknown'}`),
+        el('strong', { class: 'c-count' }, countText)),
+      actionsRow(u)));
   }
-};
+}
 
 function renderHistory(now, tz) {
   const list = $('history');
