@@ -15,6 +15,11 @@ name: Medication checker
 
 on:
   workflow_dispatch:
+    inputs:
+      test_message:
+        description: 'Send this text to every phone as a test (it shows in the public log)'
+        type: string
+        default: ''
   schedule:
     - cron: '3,18,33,48 * * * *'
 
@@ -51,6 +56,7 @@ jobs:
         run: node data-repo-template/checker/check.mjs
         env:
           QUIET: '1'
+          TEST_MESSAGE: ${{ inputs.test_message }}
           STATE_REPO: ${{ vars.STATE_REPO || 'fishboyjr/PillTime-data' }}
           GITHUB_TOKEN: ${{ secrets.DATA_TOKEN }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
