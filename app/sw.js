@@ -1,6 +1,6 @@
 // Service worker: offline app shell and Web Push display.
 // Bump VERSION when shell files change so phones pick up the new copy.
-const VERSION = 'pilltime-v8';
+const VERSION = 'pilltime-v9';
 const SHELL = [
   './', 'index.html', 'styles.css', 'app.js',
   'lib/schedule.js', 'lib/format.js', 'lib/github.js', 'lib/demo.js', 'lib/hyperspace.js', 'images/dog-head.webp',
