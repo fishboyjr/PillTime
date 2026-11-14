@@ -101,6 +101,8 @@ for (const plan of plans) {
     }
   }
   log(`Unit ${plan.unit}: delivered to ${ok}/${subs.length}${dryRun ? ' (dry run)' : ''}`);
+  // Counts only, safe for public logs: shows whether each reminder reached every device.
+  if (quiet) console.log(`Reminder sent: accepted by ${ok} of ${subs.length} devices${dead.size ? `, ${dead.size} expired` : ''}`);
   // Only mark as notified if at least one phone accepted it; otherwise retry next run.
   if (ok > 0) sent.push(plan);
   // Every live subscription refused it (for example a wrong VAPID key): fail

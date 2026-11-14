@@ -61,3 +61,12 @@ test('applyResults skips meds logged since planning, and removes dead subscripti
   assert.deepEqual(out.subscriptions.map((x) => x.endpoint), ['e1']);
   assert.equal(applyResults(fresher, plans, []), null, 'no change -> null');
 });
+
+test('each dose gets its own notification tag', () => {
+  let s = given();
+  const [p1] = planNotifications(s, T0 + 6 * H + 60000);
+  s = applyGiven(s, 'q6', new Date(T0 + 6 * H + 120000).toISOString(), 'B', T0 + 6 * H + 120000);
+  const [p2] = planNotifications(s, T0 + 12 * H + 180000);
+  assert.match(p1.payload.tag, /^pilltime-q6-\d+$/);
+  assert.notEqual(p1.payload.tag, p2.payload.tag);
+});

@@ -42,7 +42,9 @@ export function planNotifications(state, now) {
       unit: unit.id,
       // The exact next_due values this push is for, per med.
       dueFor: Object.fromEntries(unit.meds.map((m) => [m.id, m.next_due])),
-      payload: { title: 'Dog medication due', body, tag: `pilltime-${unit.id}` }
+      // A tag unique to this dose: a reminder that reused the tag of one still
+      // on screen could replace it silently, with no sound or banner.
+      payload: { title: 'Dog medication due', body, tag: `pilltime-${unit.id}-${due}` }
     });
   }
   return plans;
