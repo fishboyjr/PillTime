@@ -3,7 +3,7 @@ import {
   undoableEntry, applyUndo, upsertSubscription, removeSubscription,
   hasSubscription, validateState
 } from './lib/schedule.js';
-import { formatWhen, formatRelative } from './lib/format.js';
+import { formatWhen, formatRelative, formatClock } from './lib/format.js';
 import { GitHubFile } from './lib/github.js';
 import { DemoFile } from './lib/demo.js';
 
@@ -64,19 +64,70 @@ function showView(name) {
   $('view-meds').hidden = name !== 'meds';
   $('view-settings').hidden = name !== 'settings';
   if (name === 'settings') fillSettingsForm();
+  window.scrollTo(0, 0);
 }
 
+// Setup screen: name first, then notifications, then Advanced settings.
+// Before the phone is connected, Advanced settings is open with no warning,
+// since it is the setup itself.
 function fillSettingsForm() {
-  const f = $('settings-form');
   const c = config || {};
-  f.name.value = c.name || '';
+  const connected = !!config;
+  $('your-name').value = c.name || '';
+  $('name-status').hidden = true;
+  $('name-actions').hidden = !connected;
+  $('settings-back').hidden = !connected;
+  $('notify-panel').hidden = !connected;
+  $('demo-panel').hidden = connected && !c.demo;
+  const f = $('settings-form');
   f.owner.value = c.owner || '';
   f.repo.value = c.repo || '';
   f.path.value = c.path || 'state.json';
   f.branch.value = c.branch || '';
   f.token.value = c.token || '';
-  $('settings-cancel').hidden = !config;
   $('settings-error').hidden = true;
+  setAdvancedOpen(!connected || !!c.demo);
+  if (connected) renderNotifyStatus();
+}
+
+function setAdvancedOpen(open) {
+  $('settings-form').hidden = !open;
+  $('advanced-toggle').setAttribute('aria-expanded', String(open));
+}
+
+function toggleAdvanced() {
+  if (!$('settings-form').hidden) { setAdvancedOpen(false); return; }
+  if (!config || config.demo) { setAdvancedOpen(true); return; }
+  const dlg = $('advanced-dialog');
+  dlg.returnValue = '';
+  dlg.addEventListener('close', () => {
+    if (dlg.returnValue === 'open') setAdvancedOpen(true);
+  }, { once: true });
+  dlg.showModal();
+}
+
+function enteredName() {
+  return $('your-name').value.trim();
+}
+
+function requireName(errBox) {
+  const name = enteredName();
+  if (name) return name;
+  errBox.textContent = 'Enter your name at the top first.';
+  errBox.hidden = false;
+  $('your-name').focus();
+  return null;
+}
+
+function saveName(ev) {
+  ev.preventDefault();
+  const name = enteredName();
+  if (!name || !config) return;
+  config = { ...config, name };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  const st = $('name-status');
+  st.textContent = 'Saved.';
+  st.hidden = false;
 }
 
 const LEVEL_TEXT = { due: 'DUE', soon: 'DUE SOON', ok: 'OK', unknown: 'NOT LOGGED YET' };
@@ -90,31 +141,141 @@ function render() {
   }
   const now = Date.now();
   const tz = state.timezone;
-  for (const unit of getUnits(state)) {
-    const st = unitStatus(unit, now);
-    const undo = undoableEntry(state, unit.id);
-    const facts = el('dl', { class: 'facts' },
-      el('dt', {}, 'Next due'),
-      el('dd', {}, st.nextDue == null ? 'After first dose is logged'
-        : `${formatWhen(st.nextDue, now, tz)} (${formatRelative(st.nextDue, now)})`),
-      el('dt', {}, 'Last given'),
-      el('dd', {}, st.lastGiven == null ? 'Never'
-        : `${formatWhen(st.lastGiven, now, tz)} by ${st.lastBy || 'unknown'}`)
-    );
-    const actions = el('div', { class: 'row' },
-      el('button', { type: 'button', class: 'given', onclick: () => openGiven(unit.id), disabled: busy ? '' : null }, 'Given'));
-    if (undo) {
-      actions.append(el('button', { type: 'button', class: 'link', onclick: () => undoDose(unit.id, undo) }, 'Undo last'));
-    }
-    cards.append(el('article', { class: `card ${st.level}` },
-      el('p', { class: 'card-title' }, unitLabel(unit)),
-      el('span', { class: 'badge' }, LEVEL_TEXT[st.level]),
-      facts, actions));
-  }
+  const units = getUnits(state).map((unit) => ({
+    unit, st: unitStatus(unit, now), undo: undoableEntry(state, unit.id), label: unitLabel(unit)
+  }));
+  const design = currentDesign();
+  cards.className = `cards design-${design}`;
+  (DESIGNS[design] || DESIGNS.current)(cards, units, now, tz);
   $('updated').textContent = lastFetch ? `Updated ${formatRelative(lastFetch, now)}` : 'Showing saved copy';
   renderHistory(now, tz);
   renderNotifyStatus();
 }
+
+// ---------- card designs ----------
+// Preview with ?design=a|b|c in the URL. The chosen one becomes the default.
+
+function currentDesign() {
+  const q = new URLSearchParams(location.search).get('design');
+  return q && DESIGNS[q] ? q : 'current';
+}
+
+// "2 h 15 min" style parts for big countdowns.
+function countdown(st, now) {
+  if (st.nextDue == null) return { lead: 'Not logged yet', value: '—' };
+  const mins = Math.round((st.nextDue - now) / 60000);
+  const abs = Math.abs(mins);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  const value = h ? `${h} h ${m} min` : `${m} min`;
+  if (abs < 1) return { lead: 'Due', value: 'Now' };
+  return mins > 0 ? { lead: 'Due in', value } : { lead: 'Overdue by', value };
+}
+
+function dayWord(t, now, tz) {
+  const clock = formatClock(t, tz);
+  return formatWhen(t, now, tz).replace(` ${clock}`, '');
+}
+
+function actionsRow(u) {
+  const row = el('div', { class: 'row' },
+    el('button', { type: 'button', class: 'given', onclick: () => openGiven(u.unit.id), disabled: busy ? '' : null }, 'Given'));
+  if (u.undo) row.append(el('button', { type: 'button', class: 'link', onclick: () => undoDose(u.unit.id, u.undo) }, 'Undo last'));
+  return row;
+}
+
+function lastGivenText(st, now, tz) {
+  return st.lastGiven == null ? 'Never given' : `Last given ${formatWhen(st.lastGiven, now, tz)} by ${st.lastBy || 'unknown'}`;
+}
+
+const DESIGNS = {
+  // The original layout.
+  current(cards, units, now, tz) {
+    for (const u of units) {
+      const { st } = u;
+      const facts = el('dl', { class: 'facts' },
+        el('dt', {}, 'Next due'),
+        el('dd', {}, st.nextDue == null ? 'After first dose is logged'
+          : `${formatWhen(st.nextDue, now, tz)} (${formatRelative(st.nextDue, now)})`),
+        el('dt', {}, 'Last given'),
+        el('dd', {}, st.lastGiven == null ? 'Never'
+          : `${formatWhen(st.lastGiven, now, tz)} by ${st.lastBy || 'unknown'}`));
+      cards.append(el('article', { class: `card ${st.level}` },
+        el('p', { class: 'card-title' }, u.label),
+        el('span', { class: 'badge' }, LEVEL_TEXT[st.level]),
+        facts, actionsRow(u)));
+    }
+  },
+
+  // A: big countdown. The time left is the largest thing on the card.
+  a(cards, units, now, tz) {
+    for (const u of units) {
+      const { st } = u;
+      const cd = countdown(st, now);
+      cards.append(el('article', { class: `card ${st.level}` },
+        el('p', { class: 'a-name' }, u.label),
+        el('p', { class: 'a-lead' }, cd.lead),
+        el('p', { class: 'a-count' }, cd.value),
+        st.nextDue == null ? null
+          : el('p', { class: 'a-at' }, `${dayWord(st.nextDue, now, tz)} at ${formatClock(st.nextDue, tz)}`),
+        el('p', { class: 'a-last' }, lastGivenText(st, now, tz)),
+        actionsRow(u)));
+    }
+  },
+
+  // B: "Next up" banner for the soonest dose, then compact cards.
+  b(cards, units, now, tz) {
+    const order = units.slice().sort((x, y) =>
+      (x.st.nextDue == null ? Infinity : x.st.nextDue) - (y.st.nextDue == null ? Infinity : y.st.nextDue));
+    const first = order[0];
+    if (first && first.st.nextDue != null) {
+      const st = first.st;
+      const overdue = st.level === 'due';
+      cards.append(el('section', { class: `hero ${st.level}` },
+        el('p', { class: 'hero-eyebrow' }, overdue ? 'OVERDUE' : 'NEXT UP'),
+        el('p', { class: 'hero-time' }, formatClock(st.nextDue, tz)),
+        el('p', { class: 'hero-rel' }, `${dayWord(st.nextDue, now, tz)} · ${formatRelative(st.nextDue, now)}`),
+        el('p', { class: 'hero-name' }, first.label),
+        actionsRow(first)));
+    }
+    for (const u of order) {
+      if (u === first && u.st.nextDue != null) continue;
+      const { st } = u;
+      cards.append(el('article', { class: `card compact ${st.level}` },
+        el('div', { class: 'b-line' },
+          el('p', { class: 'b-name' }, u.label),
+          el('p', { class: 'b-time' }, st.nextDue == null ? '—' : formatClock(st.nextDue, tz))),
+        el('p', { class: 'b-sub' }, st.nextDue == null ? 'Not logged yet'
+          : `${dayWord(st.nextDue, now, tz)} · ${formatRelative(st.nextDue, now)}`),
+        el('p', { class: 'b-last' }, lastGivenText(st, now, tz)),
+        actionsRow(u)));
+    }
+  },
+
+  // C: due time on the right, with a bar filling from last dose to next.
+  c(cards, units, now, tz) {
+    for (const u of units) {
+      const { st } = u;
+      let pct = 0;
+      if (st.nextDue != null && st.lastGiven != null && st.nextDue > st.lastGiven) {
+        pct = Math.min(100, Math.max(0, ((now - st.lastGiven) / (st.nextDue - st.lastGiven)) * 100));
+      } else if (st.level === 'due') pct = 100;
+      const bar = el('div', { class: 'c-bar', role: 'progressbar', 'aria-valuenow': String(Math.round(pct)), 'aria-valuemin': '0', 'aria-valuemax': '100' },
+        el('div', { class: 'c-fill', style: `width:${pct}%` }));
+      cards.append(el('article', { class: `card ${st.level}` },
+        el('div', { class: 'c-top' },
+          el('div', {},
+            el('p', { class: 'c-name' }, u.label),
+            el('p', { class: 'c-day' }, st.nextDue == null ? 'Not logged yet' : `Due ${dayWord(st.nextDue, now, tz).replace(/^(Today|Tomorrow|Yesterday)$/, (w) => w.toLowerCase())}`)),
+          el('p', { class: 'c-time' }, st.nextDue == null ? '—' : formatClock(st.nextDue, tz))),
+        bar,
+        el('div', { class: 'c-foot' },
+          el('span', {}, st.lastGiven == null ? 'Never given' : `Given ${formatClock(st.lastGiven, tz)} · ${st.lastBy || 'unknown'}`),
+          el('strong', {}, st.nextDue == null ? '' : (st.level === 'due' ? `Overdue ${formatRelative(st.nextDue, now).replace(' ago', '')}` : formatRelative(st.nextDue, now)))),
+        actionsRow(u)));
+    }
+  }
+};
 
 function renderHistory(now, tz) {
   const list = $('history');
@@ -366,16 +527,18 @@ async function ensureSubscriptionSaved() {
 async function saveSettings(ev) {
   ev.preventDefault();
   const f = ev.target;
+  const err = $('settings-error');
+  err.hidden = true;
+  const name = requireName(err);
+  if (!name) return;
   const next = {
-    name: f.name.value.trim(),
+    name,
     owner: f.owner.value.trim(),
     repo: f.repo.value.trim(),
     path: f.path.value.trim() || 'state.json',
     branch: f.branch.value.trim(),
     token: f.token.value.trim()
   };
-  const err = $('settings-error');
-  err.hidden = true;
   try {
     const client = makeClient(next);
     const { data } = await client.read();
@@ -396,7 +559,7 @@ async function saveSettings(ev) {
 }
 
 async function startDemo() {
-  const name = $('settings-form').name.value.trim() || 'Me';
+  const name = enteredName() || 'Me';
   config = { demo: true, name };
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
   gh = makeClient(config);
@@ -423,9 +586,14 @@ if ('serviceWorker' in navigator) {
 }
 
 $('refresh').addEventListener('click', refresh);
-$('open-settings').addEventListener('click', () => showView('settings'));
+$('open-settings').addEventListener('click', () => {
+  if ($('view-settings').hidden) showView('settings');
+  else if (config) { showView('meds'); render(); }
+});
 $('settings-form').addEventListener('submit', saveSettings);
-$('settings-cancel').addEventListener('click', () => showView('meds'));
+$('settings-back').addEventListener('click', () => { showView('meds'); render(); });
+$('name-form').addEventListener('submit', saveName);
+$('advanced-toggle').addEventListener('click', toggleAdvanced);
 $('settings-forget').addEventListener('click', forgetEverything);
 $('settings-demo').addEventListener('click', startDemo);
 $('given-at').addEventListener('input', updatePreview);

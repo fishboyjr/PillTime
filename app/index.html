@@ -31,7 +31,28 @@
       <div id="cards" class="cards" aria-live="polite"></div>
       <p id="updated" class="muted small"></p>
 
-      <section class="panel" id="notify-panel">
+      <section class="panel">
+        <h2>Recent doses</h2>
+        <ol id="history" class="history"></ol>
+      </section>
+    </section>
+
+    <section id="view-settings" hidden>
+      <div class="view-head">
+        <button type="button" id="settings-back" class="back-btn">‹ Back</button>
+        <h2 class="view-title">Setup</h2>
+      </div>
+
+      <form id="name-form" class="panel" autocomplete="off">
+        <label>Your name
+          <input id="your-name" name="name" required maxlength="40" placeholder="e.g. Ben">
+        </label>
+        <p class="muted small">Shown next to doses you log from this phone.</p>
+        <p id="name-status" class="muted small" hidden></p>
+        <div class="row" id="name-actions"><button type="submit">Save name</button></div>
+      </form>
+
+      <section class="panel" id="notify-panel" hidden>
         <h2>Notifications on this phone</h2>
         <p id="notify-status" class="muted"></p>
         <div class="row">
@@ -41,37 +62,31 @@
         </div>
       </section>
 
-      <section class="panel">
-        <h2>Recent doses</h2>
-        <ol id="history" class="history"></ol>
-      </section>
-    </section>
-
-    <section id="view-settings" hidden>
-      <section class="panel">
+      <section class="panel" id="demo-panel" hidden>
         <h2>Just looking?</h2>
         <p class="muted small">Try the app with sample data that stays on this phone. No GitHub setup needed.</p>
-        <div class="row"><button type="button" id="settings-demo">Try the demo</button></div>
+        <div class="row"><button type="button" id="settings-demo" class="secondary">Try the demo</button></div>
       </section>
-      <form id="settings-form" class="panel" autocomplete="off">
-        <h2>Setup</h2>
-        <p class="muted small">Saved only on this phone. On iPhone, do this inside the Home Screen app, not in Safari: they keep separate storage.</p>
-        <label>Your name <input name="name" required maxlength="40" placeholder="Shown next to doses you log"></label>
-        <label>Data repo owner <input name="owner" required autocapitalize="off" spellcheck="false"></label>
-        <label>Data repo name <input name="repo" required autocapitalize="off" spellcheck="false"></label>
-        <label>File path <input name="path" value="state.json" autocapitalize="off" spellcheck="false"></label>
-        <label>Branch <input name="branch" placeholder="default branch" autocapitalize="off" spellcheck="false"></label>
-        <label>GitHub token <input name="token" type="password" required autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></label>
-        <p class="muted small">Fine-grained token for the data repo only, with Contents: Read and write.</p>
-        <p id="settings-error" class="error" hidden></p>
-        <div class="row">
-          <button type="submit">Save and connect</button>
-          <button type="button" id="settings-cancel" class="secondary">Cancel</button>
-        </div>
-        <div class="row">
-          <button type="button" id="settings-forget" class="danger">Forget everything on this phone</button>
-        </div>
-      </form>
+
+      <section class="panel" id="advanced-panel">
+        <button type="button" id="advanced-toggle" class="disclosure" aria-expanded="false">
+          <span>Advanced settings</span><span class="chev" aria-hidden="true">›</span>
+        </button>
+        <form id="settings-form" autocomplete="off" hidden>
+          <p class="muted small">Connection to the shared data. Saved only on this phone. On iPhone, set this up inside the Home Screen app, not in Safari: they keep separate storage.</p>
+          <label>Data repo owner <input name="owner" required autocapitalize="off" spellcheck="false"></label>
+          <label>Data repo name <input name="repo" required autocapitalize="off" spellcheck="false"></label>
+          <label>File path <input name="path" value="state.json" autocapitalize="off" spellcheck="false"></label>
+          <label>Branch <input name="branch" placeholder="default branch" autocapitalize="off" spellcheck="false"></label>
+          <label>GitHub token <input name="token" type="password" required autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></label>
+          <p class="muted small">Fine-grained token for the data repo only, with Contents: Read and write.</p>
+          <p id="settings-error" class="error" hidden></p>
+          <div class="row"><button type="submit">Save and connect</button></div>
+          <div class="row">
+            <button type="button" id="settings-forget" class="danger">Forget everything on this phone</button>
+          </div>
+        </form>
+      </section>
     </section>
   </main>
 
@@ -85,6 +100,17 @@
       <div class="row">
         <button value="confirm" id="given-confirm">Log dose</button>
         <button value="cancel" class="secondary" formnovalidate>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="advanced-dialog">
+    <form method="dialog">
+      <h2>Advanced settings</h2>
+      <p class="warning">Changing any of these values may stop the app from working properly on this phone, including reminders. Only change them if you know what they do.</p>
+      <div class="row">
+        <button value="cancel" class="secondary">Cancel</button>
+        <button value="open" id="advanced-continue">Show advanced settings</button>
       </div>
     </form>
   </dialog>
