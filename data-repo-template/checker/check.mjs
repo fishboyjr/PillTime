@@ -79,19 +79,31 @@ webpush.setVapidDetails(need('VAPID_SUBJECT'), publicKey, need('VAPID_PRIVATE_KE
 
 const sent = [];
 const dead = new Set();
+// Which push service a subscription uses, for logs: "apple", "google", ...
+function service(endpoint) {
+  const host = new URL(endpoint).hostname;
+  if (host.includes('apple')) return 'apple';
+  if (host.includes('google')) return 'google';
+  if (host.includes('mozilla')) return 'mozilla';
+  return host;
+}
+
 for (const plan of plans) {
   let ok = 0;
+  const results = [];
   for (const sub of subs) {
     if (dead.has(sub.endpoint)) continue;
     if (dryRun) { ok++; continue; }
     try {
-      await webpush.sendNotification(
+      const res = await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: sub.keys },
         JSON.stringify(plan.payload),
         { TTL: 6 * 3600, urgency: 'high' }
       );
       ok++;
+      results.push(`${service(sub.endpoint)} ${res.statusCode}`);
     } catch (e) {
+      results.push(`${service(sub.endpoint)} ${e.statusCode || 'error'}`);
       if (e.statusCode === 404 || e.statusCode === 410) {
         dead.add(sub.endpoint);
         log(`Subscription gone (${e.statusCode}); removing.`);
@@ -102,7 +114,9 @@ for (const plan of plans) {
   }
   log(`Unit ${plan.unit}: delivered to ${ok}/${subs.length}${dryRun ? ' (dry run)' : ''}`);
   // Counts only, safe for public logs: shows whether each reminder reached every device.
-  if (quiet) console.log(`Reminder sent: accepted by ${ok} of ${subs.length} devices${dead.size ? `, ${dead.size} expired` : ''}`);
+  // Push service and HTTP status per device (201 = accepted). No med details.
+  if (quiet) console.log(`Reminder sent: accepted by ${ok} of ${subs.length} devices (${results.join(', ')})`);
+  else log(`  per device: ${results.join(', ')}`);
   // Only mark as notified if at least one phone accepted it; otherwise retry next run.
   if (ok > 0) sent.push(plan);
   // Every live subscription refused it (for example a wrong VAPID key): fail
