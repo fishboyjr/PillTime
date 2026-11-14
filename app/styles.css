@@ -80,17 +80,6 @@ h2 { font-size: 17px; margin: 0 0 8px; }
 .card.soon { border-left-color: var(--soon); }
 .card.due { border-left-color: var(--due); background: var(--due-bg); }
 .card.unknown { border-left-color: var(--muted); }
-.card-title { font-size: 18px; font-weight: 600; margin: 0 0 4px; overflow-wrap: anywhere; }
-.badge {
-  display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .02em;
-  padding: 2px 8px; border-radius: 999px; margin-bottom: 8px;
-  background: var(--border); color: var(--text);
-}
-.card.due .badge { background: var(--due); color: var(--surface); }
-.card.soon .badge { background: var(--soon-bg); color: var(--soon); }
-.facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 12px; }
-.facts dt { color: var(--muted); }
-.facts dd { margin: 0; }
 .card .row { margin-top: 0; }
 
 .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -168,3 +157,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .design-c .card.due .c-name { color: var(--due); }
 .design-c .card.due .c-day { font-weight: 700; }
 .design-c .card.due .c-fill { background: var(--due); }
+
+/* Refresh button spins while working. */
+@keyframes spin { to { transform: rotate(360deg); } }
+#refresh.spinning { animation: spin .7s linear infinite; }
+#refresh:disabled { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #refresh.spinning { animation: none; opacity: .5; } }

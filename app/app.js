@@ -508,11 +508,49 @@ function forgetEverything() {
 
 // ---------- wiring ----------
 
+// ---------- refresh button and app updates ----------
+
+// Reload once when a new version of the app takes over, unless a dialog is
+// open (the new version then loads the next time the app opens).
+const hadController = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service worker failed', e));
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading || document.querySelector('dialog[open]')) return;
+    reloading = true;
+    location.reload();
+  });
 }
 
-$('refresh').addEventListener('click', refresh);
+async function checkForAppUpdate() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.update();
+  } catch { /* offline: try again next time */ }
+}
+
+// The ↻ button: spin while re-reading the shared data, then check whether a
+// newer version of the app has been published.
+async function manualRefresh() {
+  const btn = $('refresh');
+  if (btn.classList.contains('spinning')) return;
+  btn.classList.add('spinning');
+  btn.disabled = true;
+  const started = Date.now();
+  try {
+    await refresh();
+    await checkForAppUpdate();
+  } finally {
+    setTimeout(() => {
+      btn.classList.remove('spinning');
+      btn.disabled = false;
+    }, Math.max(0, 700 - (Date.now() - started)));
+  }
+}
+
+$('refresh').addEventListener('click', manualRefresh);
 $('open-settings').addEventListener('click', () => {
   if ($('view-settings').hidden) showView('settings');
   else if (config) { showView('meds'); render(); }
